@@ -1,0 +1,51 @@
+on: repository_dispatch
+
+name: Dr. Ian Malcolm
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          for type in data domdom; do
+            rm -rf "$type"
+            git clone "https://github.com/eirikb/$type" "$type-source"
+
+            cd "$type-source"
+            export VERSION2=$(git describe --tags --abbrev=0)
+            echo ::set-env name=VERSION::$(git describe --tags --abbrev=0)
+            cd ..
+            cat .github/workflows/_README.md "$type-source/readme.md" > README.md
+
+            mv "$type-source/src" "$type"
+            rm -rf *-source
+
+            sed -ri 's/global/window/' "$type"/*
+            sed -ri "s/(from '.*)'.*/\1.ts';/" "$type"/*
+          done
+
+          sed -ri "s/from.*@eirikb.*/from '..\/data\/index.ts';/" domdom/*
+
+          git config --global user.name 'Boten Anna'
+          git config --global user.email 'eirikb@eirikb.no'
+          git add .
+          git commit -m 'Automatic!'
+          git push origin master
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
+          draft: false
+          prerelease: false
