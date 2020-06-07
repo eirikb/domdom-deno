@@ -13,11 +13,6 @@ jobs:
             git clone "https://github.com/eirikb/$type" "$type-source"
             cp "$type-source/LICENSE" ./
 
-            cd "$type-source"
-            export VERSION=$(git describe --tags --abbrev=0)
-            echo ::set-env name=VERSION::$(git describe --tags --abbrev=0)
-            echo "VERSION set to $VERSION"
-            cd ..
             cat .github/workflows/_README.md "$type-source/readme.md" > README.md
 
             mv "$type-source/src" "$type"
@@ -41,13 +36,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Get latest domdom tag
+        run: |
+          export VERSION=$(git ls-remote --tags --refs --sort="v:refname" https://github.com/eirikb/domdom | tail -n1 | sed 's/.*\///')
+          echo "VERSION is $VERSION"
+          echo ::set-env name=VERSION::$VERSION
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Release v${{ env.VERSION }}
+          tag_name: ${{ env.VERSION }}
+          release_name: Release ${{ env.VERSION }}
           draft: false
           prerelease: false
