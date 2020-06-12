@@ -37,30 +37,43 @@ data.set('test', 'World!');
 Original readme below here
 ---
 
+<p align="center">
+
+![out4](https://user-images.githubusercontent.com/241706/83919341-b0a9fb00-a77a-11ea-9965-beea17502fdd.gif)
+
+<h1 align="center">Domdom</h1>
+<p align="center">The proactive web framework for the unprofessional</p>
+<p align="center">
+
 [![npm](https://img.shields.io/npm/v/@eirikb/domdom.svg)](https://npmjs.org/package/@eirikb/domdom)
 [![Build](https://github.com/eirikb/domdom/workflows/Build/badge.svg)](https://github.com/eirikb/domdom/actions?query=workflow%3ABuild)
 [![bundlephobia](https://badgen.net/bundlephobia/minzip/@eirikb/domdom)](https://bundlephobia.com/result?p=@eirikb/domdom)
 
-The proactive web framework for the unprofessional
+</p>
 
-![out4](https://user-images.githubusercontent.com/241706/83919341-b0a9fb00-a77a-11ea-9965-beea17502fdd.gif)
+<p align="center">
 
 **Facts** - not highlights, just facts:
 
 - Alternative to React + Redux or Vue + Vuex, with support for routing
 - No virtual dom
 - Support for Deno (without jspm or pika)
+- Support for TypeScript
 - Nothing reactive - totally unreactive - fundamentally different from React
 - One global observable state
   - Support for re-usable components (with partition of global state)
   - No local state
 - JSX return pure elements
 - Doesn't support arrays
+
   - It's not as bad as you might think - Not great, not terrible
+
+</p>
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
+- [Deno](#deno)
 - [Getting started](#getting-started)
 - [APIsh](#apish)
   - [Initialize domdom](#initialize-domdom)
@@ -82,6 +95,7 @@ The proactive web framework for the unprofessional
   - [Login form](#login-form)
   - [Split view and data](#split-view-and-data)
   - [Animation (garbage collection)](#animation-garbage-collection)
+- [TypeScript](#typescript)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -107,13 +121,13 @@ index.html:
 app.jsx:
 
 ```jsx
-import domdom from "@eirikb/domdom";
+import domdom from '@eirikb/domdom';
 
-const view = ({ on }) => <div>Hello, {on("name")}</div>;
+const view = ({ on }) => <div>Hello, {on('name')}</div>;
 
 const dd = domdom(document.body, view);
 
-dd.set("name", "world!");
+dd.set('name', 'world!');
 ```
 
 Run:
@@ -127,7 +141,7 @@ npx parcel index.html
 ### Initialize domdom
 
 ```jsx
-import domdom from "@eirikb/domdom";
+import domdom from '@eirikb/domdom';
 const dd = domdom(parentElement, view);
 ```
 
@@ -135,7 +149,7 @@ This will put `React` (required for JSX, not my naming) on `global`/`window`.
 If you're not a madlad you can alternatively create a local `React`:
 
 ```jsx
-import domdom from "@eirikb/domdom";
+import domdom from '@eirikb/domdom';
 const { React, data, append } = domdom();
 append(document.body, view);
 ```
@@ -150,7 +164,7 @@ All elements created with jsx, in the context of domdom, are elements which can 
 
 ```jsx
 const element = <div>Behold!</div>;
-element.style.color = "red";
+element.style.color = 'red';
 ```
 
 ### "Components"
@@ -161,7 +175,7 @@ By creating a function you create a component.
 function MyComponent({ on }) {
   return (
     <ul>
-      {on("players.$id.name", name => (
+      {on('players.$id.name', name => (
         <li>Player {name}</li>
       ))}
     </ul>
@@ -193,7 +207,7 @@ All attributes starting with 'on' are added to `addEventListener` on the element
 
 ```jsx
 function MyButton({ trigger }) {
-  return <button onClick={() => trigger("Clicked!")}>Click me!</button>;
+  return <button onClick={() => trigger('Clicked!')}>Click me!</button>;
 }
 ```
 
@@ -205,10 +219,10 @@ either as string or JSON of object.
 ```jsx
 const view = ({ on }) => (
   <ul>
-    {on("players.$id.name", name => (
+    {on('players.$id.name', name => (
       <li>Player {name}</li>
     ))}
-    {on("info")}
+    {on('info')}
   </ul>
 );
 ```
@@ -219,7 +233,7 @@ This will match on `players.1.name` and `players.2.name` etc.
 Named wildcards can be resolved in the callback:
 
 ```jsx
-on("players.$id", (player, { $id }) => console.log(`Id is ${$id}`));
+on('players.$id', (player, { $id }) => console.log(`Id is ${$id}`));
 ```
 
 You can have multiple wildcards: `players.$id.items.$itemId.size`.
@@ -233,10 +247,10 @@ They have data in global state, but don't rely on the parent path.
 ```jsx
 const view = ({ on }) => (
   <div>
-    {on("players.$id", player => (
+    {on('players.$id', player => (
       <div>
         Player name: (won't update on change): {player.name} <br />
-        {on(">.name", name => (
+        {on('>.name', name => (
           <span>Player name: {name}</span>
         ))}
       </div>
@@ -253,15 +267,15 @@ Odd/Even of conditional and view. View must be a function.
 ```jsx
 const view = ({ when }) => (
   <div>
-    {when("route", [
-      "home",
+    {when('route', [
+      'home',
       () => <div>Home!</div>,
-      "away",
+      'away',
       () => <div>Away!</div>,
-      route => (route || "").startsWith("eh"),
+      route => (route || '').startsWith('eh'),
       () => <div>Eh?</div>,
       false,
-      () => <div>Route is literally boolean false</div>
+      () => <div>Route is literally boolean false</div>,
     ])}
   </div>
 );
@@ -275,7 +289,7 @@ until some value is set `or` must be used.
 ```jsx
 const view = ({ when }) => (
   <div>
-    {when("routing", ["home", () => <div>Home!</div>]).or(
+    {when('routing', ['home', () => <div>Home!</div>]).or(
       <div>Loading app in the fastest possible way...</div>
     )}
   </div>
@@ -289,19 +303,19 @@ Similar to v-model and ng-model.
 Suggest not using this if possible, using forms directly like in recipes is much better.
 
 ```jsx
-dd.on("= search", event => {
+dd.on('= search', event => {
   event.preventDefault();
-  dd.set("result", `Data for ${dd.get("text")} here...`);
+  dd.set('result', `Data for ${dd.get('text')} here...`);
 });
 
 const view = ({ when, on, trigger }) => (
-  <form onSubmit={e => trigger("search", e)}>
+  <form onSubmit={e => trigger('search', e)}>
     <input type="search" dd-model="text" />
     <input type="checkbox" dd-model="more" />
-    {when("more", [true, () => "This is more"])}
-    Current text: {on("text")}
+    {when('more', [true, () => 'This is more'])}
+    Current text: {on('text')}
     <button type="submit">Search</button>
-    {on("result", _ => _)}
+    {on('result', _ => _)}
   </form>
 );
 ```
@@ -314,9 +328,9 @@ It might feel and look a bit quirky, but there it is.
 ```jsx
 const view = ({ on, set, get }) => (
   <div>
-    <button onClick={() => set("toggle", !get("toggle"))}>Toggle</button>
-    <button disabled={on("toggle").or(true)}>A</button>
-    <button disabled={on("toggle", res => !res)}>B</button>
+    <button onClick={() => set('toggle', !get('toggle'))}>Toggle</button>
+    <button disabled={on('toggle').or(true)}>A</button>
+    <button disabled={on('toggle', res => !res)}>B</button>
   </div>
 );
 ```
@@ -328,14 +342,14 @@ Meaning it's not possible to put arrays into state, if you try they will be conv
 E.g.,
 
 ```js
-dd.set("users", ["Mr. A", "Mr. B"]);
+dd.set('users', ['Mr. A', 'Mr. B']);
 
 // Becomes
 const result = {
   users: {
-    0: "Mr. A",
-    1: "Mr. B"
-  }
+    0: 'Mr. A',
+    1: 'Mr. B',
+  },
 };
 ```
 
@@ -344,20 +358,20 @@ E.g.,
 
 ```js
 dd.set(
-  "users",
+  'users',
   [
-    { id: "a", name: "Mr. A" },
-    { id: "b", name: "Mr. B" }
+    { id: 'a', name: 'Mr. A' },
+    { id: 'b', name: 'Mr. B' },
   ],
-  "id"
+  'id'
 );
 
 // Becomes
 const result = {
   users: {
-    a: { id: "a", name: "Mr. A" },
-    b: { id: "b", name: "Mr. B" }
-  }
+    a: { id: 'a', name: 'Mr. A' },
+    b: { id: 'b', name: 'Mr. B' },
+  },
 };
 ```
 
@@ -371,7 +385,7 @@ E.g.,
 ```jsx
 const view = ({ on }) => (
   <ul>
-    {on("users.$id", user => (
+    {on('users.$id', user => (
       <li>{user.name}</li>
     ))}
   </ul>
@@ -380,13 +394,13 @@ const view = ({ on }) => (
 const dd = domdom(document.body, view);
 
 dd.set(
-  "users",
+  'users',
   [
-    { id: "a", name: "Mr. A" },
-    { id: "b", name: "Mr. B" },
-    { id: "b", name: "Mr. C" }
+    { id: 'a', name: 'Mr. A' },
+    { id: 'b', name: 'Mr. B' },
+    { id: 'b', name: 'Mr. C' },
   ],
-  "id"
+  'id'
 );
 ```
 
@@ -410,9 +424,9 @@ E.g.,
 ```jsx
 const view = ({ on }) => (
   <ul>
-    {on("users")
+    {on('users')
       .map(user => <li>{user.name}</li>)
-      .filter(user => user.name !== "Mr. B")
+      .filter(user => user.name !== 'Mr. B')
       .sort((a, b) => b.id.localeCompare(a.id))}
   </ul>
 );
@@ -436,13 +450,13 @@ E.g.,
 ```jsx
 const view = ({ on }) => (
   <ul>
-    {on("users")
+    {on('users')
       .map(user => <li>{user.name}</li>)
-      .filterOn("test", (filter, user) => user.name !== filter)}
+      .filterOn('test', (filter, user) => user.name !== filter)}
   </ul>
 );
 const dd = domdom(document.body, view);
-dd.set("test", "Mr. C");
+dd.set('test', 'Mr. C');
 // Add users as above
 ```
 
@@ -464,8 +478,8 @@ How to handle common tasks with domdom
 ```jsx
 const view = ({ when }) => (
   <div>
-    {when("route", ["login", () => <Login />, "welcome", () => <Welcome />]).or(
-      "Loading app..."
+    {when('route', ['login', () => <Login />, 'welcome', () => <Welcome />]).or(
+      'Loading app...'
     )}
   </div>
 );
@@ -474,8 +488,8 @@ function gotoRoute(route) {
   window.location.hash = route;
 }
 
-window.addEventListener("hashchange", () =>
-  dd.set("route", window.location.hash.slice(1))
+window.addEventListener('hashchange', () =>
+  dd.set('route', window.location.hash.slice(1))
 );
 ```
 
@@ -484,9 +498,9 @@ window.addEventListener("hashchange", () =>
 ```jsx
 function login(event) {
   event.preventDefault();
-  fetch("/login", {
-    method: "post",
-    body: new URLSearchParams(new FormData(event.target))
+  fetch('/login', {
+    method: 'post',
+    body: new URLSearchParams(new FormData(event.target)),
   });
 }
 
@@ -505,10 +519,10 @@ _data.js_
 
 ```js
 export default ({ on, set }) => {
-  on("= search", event => {
+  on('= search', event => {
     event.preventDefault();
     const searchText = event.target.search.value;
-    set("result", `Data for ${searchText} here...`);
+    set('result', `Data for ${searchText} here...`);
   });
 };
 ```
@@ -516,18 +530,18 @@ export default ({ on, set }) => {
 _index.jsx_
 
 ```jsx
-import data from "./data";
-import domdom from "@eirikb/domdom";
+import data from './data';
+import domdom from '@eirikb/domdom';
 
 const dd = domdom();
 
 data(dd);
 
 const view = ({ on, trigger }) => (
-  <form onSubmit={e => trigger("search", e)}>
+  <form onSubmit={e => trigger('search', e)}>
     <input type="search" name="search" />
     <button type="submit">Search</button>
-    {on("result", _ => _)}
+    {on('result', _ => _)}
   </form>
 );
 
@@ -546,21 +560,34 @@ The idea is to use `dd` for such things, as these listeners are automatically cl
 const view = ({ on, get, set }) => {
   const img = <img src="https://i.imgur.com/rsD0RUq.jpg" />;
 
-  on("tick", time => (img.style.transform = `rotate(${time % 180}deg)`));
+  on('tick', time => (img.style.transform = `rotate(${time % 180}deg)`));
 
   return (
     <div>
-      <button onClick={() => set("run", !get("run"))}>Start/Stop</button>
+      <button onClick={() => set('run', !get('run'))}>Start/Stop</button>
       {img}
     </div>
   );
 };
 
 (function loop(time) {
-  if (dd.get("run")) {
-    dd.set("tick", time);
+  if (dd.get('run')) {
+    dd.set('tick', time);
   }
   requestAnimationFrame(loop);
 })(0);
 ```
 
+## TypeScript
+
+Domdom has full TypeScript support, it's written in TypeScript after all.
+
+Work with `Domponent` like this:
+
+```tsx
+import { Domponent } from '@eirikb/domdom';
+const app: Domponent = ({ on }) => <div>{on('hello.world')}</div>;
+export default app;
+```
+
+Your magnificent developer tooling should help you with the rest.
