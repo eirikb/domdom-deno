@@ -1,42 +1,71 @@
-import Paths from './paths.ts';
-import { Listeners, LooseObject } from './types.ts';
+import { Paths } from './paths.ts';
+import { LooseObject } from './types.ts';
 
-export default (prefix = 'ref') => {
-  const self = {} as Listeners;
-  let cache: LooseObject = {};
-  const paths = Paths();
-  let next = 0;
+export type ListenerCallback = (
+  value: any,
+  props: {
+    path: string;
+    [key: string]: any;
+  }
+) => void;
 
-  function nextRef() {
-    next++;
-    return `${prefix}-${next}`;
+export class Listeners {
+  cache: LooseObject = {};
+  paths = new Paths();
+  next = 0;
+  prefix: string;
+
+  constructor(prefix = 'ref') {
+    this.prefix = prefix;
   }
 
-  self.add = (path, listener) => {
-    cache = {};
-    const ref = nextRef();
-    paths.add(path, ref, { listener });
+  nextRef() {
+    this.next++;
+    return `${this.prefix}-${this.next}`;
+  }
+
+  add(path: string, listener: ListenerCallback) {
+    this.cache = {};
+    const ref = this.nextRef();
+    this.paths.add(path, ref, { listener });
     return ref;
-  };
+  }
 
-  self.remove = ref => {
-    paths.remove(ref);
-    cache = {};
-  };
+  remove(ref: string) {
+    this.paths.remove(ref);
+    this.cache = {};
+  }
 
-  function get(path: string) {
-    return paths.lookup(path).map(res => {
+  _get(path: string) {
+    return this.paths.lookup(path).map(res => {
       res._ = Object.entries(res._).map(([ref, res]) => [ref, res['listener']]);
       return res;
     });
   }
 
-  self.get = path => {
-    if (cache[path]) {
-      return cache[path];
+  get(path: string) {
+    if (this.cache[path]) {
+      return this.cache[path];
     }
-    return (cache[path] = get(path));
-  };
+    return (this.cache[path] = this._get(path));
+  }
+}
 
-  return self;
-};
+export class ImmediateListeners extends Listeners {
+  ref = '';
+
+  constructor() {
+    super('immediate');
+  }
+
+  add(path: string, listener: ListenerCallback): string {
+    this.ref = super.add(path, listener);
+    return this.ref;
+  }
+
+  get(path: string) {
+    const res = super.get(path);
+    this.remove(this.ref);
+    return res;
+  }
+}
