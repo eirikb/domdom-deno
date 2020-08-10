@@ -1,6 +1,7 @@
 import { Domode, Mountable } from './types.ts';
 import { Hodor } from './hodor.ts';
 import { Data } from '../data/index.ts';
+import { OnInteract } from 'domdom.ts';
 
 function setVal(element: any, key: string, value: any) {
   if (typeof element[key] === 'object') {
@@ -14,6 +15,7 @@ export default (
   data: Data,
   mountables: Mountable[],
   element: Domode | HTMLInputElement,
+  onInteract: OnInteract,
   props?: { [key: string]: any }
 ) => {
   let _value: any;
@@ -85,7 +87,10 @@ export default (
         mountables.push(hodor);
       } else if (key.startsWith('on')) {
         const name = key[2].toLocaleLowerCase() + key.slice(3);
-        element.addEventListener(name, value);
+        element.addEventListener(name, (...args) => {
+          onInteract(element as Domode);
+          return value(...args);
+        });
       } else {
         element[key] = value;
       }
