@@ -3,7 +3,7 @@ import { DomStower } from './dom-stower.ts';
 import { DomSquint } from './dom-squint.ts';
 import ddProps from './dd-props.ts';
 import { Hodor } from './hodor.ts';
-import { Domode } from './types.ts';
+import { Domode, Opts } from './types.ts';
 
 export type OnInteract = (node: Domode) => void;
 
@@ -27,14 +27,14 @@ export class React {
 
     if (typeof input === 'function') {
       const cbs: (() => void)[] = [];
-      const options = {
+      const options: Opts = {
         children,
         mounted(cb) {
           cbs.push(cb);
         },
       };
       this.hodors.clear();
-      const res = input({ ...props, ...options }) as Domode;
+      const res = input({ ...props }, options) as Domode;
       res.mountables.push({
         mounted() {
           for (const cb of cbs) {
