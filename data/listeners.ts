@@ -1,14 +1,17 @@
 import { Paths } from './paths.ts';
 import { LooseObject } from './types.ts';
 
+export interface ListenerCallbackProps {
+  subPath: string;
+  fullPath: string;
+  path: string;
+
+  [key: string]: any;
+}
+
 export type ListenerCallback<T> = (
   value: T,
-  props: {
-    subPath: string;
-    fullPath: string;
-    path: string;
-    [key: string]: any;
-  }
+  props: ListenerCallbackProps
 ) => any;
 
 export class Listeners {
