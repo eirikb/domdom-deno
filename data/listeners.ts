@@ -1,76 +1,65 @@
-import { Paths } from './paths.ts';
-import { LooseObject } from './types.ts';
-
-export interface ListenerCallbackProps {
-  subPath: string;
-  fullPath: string;
-  path: string;
-
-  [key: string]: any;
-}
-
-export type ListenerCallback<T> = (
-  value: T,
-  props: ListenerCallbackProps
-) => any;
+import { Lookup, Paths } from './paths.ts';
+import { ListenerCallback } from './types.ts';
 
 export class Listeners {
-  cache: LooseObject = {};
-  paths = new Paths();
-  next = 0;
-  prefix: string;
+  private paths = new Paths<ListenerCallback>();
+  private next = 0;
+  private readonly prefix: string;
 
   constructor(prefix = 'ref') {
     this.prefix = prefix;
   }
 
-  nextRef() {
+  private nextRef() {
     this.next++;
     return `${this.prefix}-${this.next}`;
   }
 
-  add<T>(path: string, listener: ListenerCallback<T>) {
-    this.cache = {};
+  add(path: string, listener: ListenerCallback) {
     const ref = this.nextRef();
-    this.paths.add(path, ref, { listener });
+    this.paths.add(path, ref, listener);
     return ref;
   }
 
   remove(ref: string) {
     this.paths.remove(ref);
-    this.cache = {};
   }
 
-  _get(path: string) {
-    return this.paths.lookup(path).map(res => {
-      res._ = Object.entries(res._).map(([ref, res]) => [ref, res['listener']]);
-      return res;
-    });
-  }
-
-  get(path: string) {
-    if (this.cache[path]) {
-      return this.cache[path];
-    }
-    return (this.cache[path] = this._get(path));
+  get(path: string[]) {
+    return this.paths.lookup(path);
   }
 }
 
-export class ImmediateListeners extends Listeners {
-  ref = '';
+export enum ChangeType {
+  Add,
+  Update,
+  Remove,
+}
 
-  constructor() {
-    super('immediate');
+export class ChangeListeners {
+  listeners = {
+    [ChangeType.Add]: new Listeners('add'),
+    [ChangeType.Update]: new Listeners('update'),
+    [ChangeType.Remove]: new Listeners('remove'),
+  };
+
+  add(changeType: ChangeType, path: string, listener: ListenerCallback) {
+    return this.listeners[changeType].add(path, listener);
   }
 
-  add<T>(path: string, listener: ListenerCallback<T>): string {
-    this.ref = super.add(path, listener);
-    return this.ref;
+  get(
+    changeType: ChangeType,
+    path: string[]
+  ): {
+    isEol: boolean;
+    lookups: Lookup<ListenerCallback>[];
+  } {
+    return this.listeners[changeType].get(path);
   }
 
-  get(path: string) {
-    const res = super.get(path);
-    this.remove(this.ref);
-    return res;
+  off(ref: string) {
+    for (const listeners of Object.values(this.listeners)) {
+      listeners.remove(ref);
+    }
   }
 }

@@ -1,104 +1,152 @@
-import { LooseObject } from './types.ts';
+class Path<T> {
+  children: {
+    [key: string]: Path<T>;
+  } = {};
+  $: {
+    [key: string]: Path<T>;
+  } = {};
 
-export interface Lookup {
-  keys: LooseObject;
-  _: LooseObject;
-  path: string;
-  fullPath?: string;
+  $x?: Path<T>;
+  $xx?: Path<T>;
+
+  value?: {
+    [ref: string]: T;
+  };
 }
 
-export class Paths {
-  map: LooseObject = {};
-  refs: LooseObject = {};
+export interface Lookup<T> {
+  keys: { [key: string]: string };
+  value: { [ref: string]: T };
+  path: string;
+  fullPath: string;
+}
 
-  add = (path: string, ref: string, input: any) => {
+class Lookuper<T> {
+  private readonly parent: Path<T>;
+  private child?: Path<T>;
+  private readonly parts: string[];
+  private result: Lookup<T>[] = [];
+  isEol: boolean = false;
+
+  constructor(parent: Path<T>, parts: string[]) {
+    this.parent = parent;
+    this.parts = parts;
+  }
+
+  private _addResult(
+    keys: string[][],
+    value: { [ref: string]: T },
+    pathUntil: number
+  ) {
+    this.result.push({
+      keys: keys.reduce((res: { [key: string]: string }, [name, value]) => {
+        res[name] = value;
+        return res;
+      }, {}),
+      value,
+      path: this.parts.slice(0, pathUntil).join('.'),
+      fullPath: this.parts.join('.'),
+    });
+  }
+
+  lookup(): Lookup<T>[] {
+    this._lookup(this.parent);
+    this.isEol =
+      !this.child ||
+      (Object.keys(this.child.children).length === 0 &&
+        (!this.child.value || Object.keys(this.child.value).length === 0) &&
+        Object.keys(this.child.$).length === 0 &&
+        !this.child.$x &&
+        !this.child.$xx);
+
+    return this.result;
+  }
+
+  private _lookup(
+    parent: Path<T>,
+    index = 0,
+    keys: string[][] = [],
+    pathUntil = 0
+  ) {
+    if (!parent || pathUntil >= this.parts.length + 1) {
+      return;
+    }
+    if (index === this.parts.length) {
+      this.child = parent;
+    }
+
+    if (parent.$xx && parent.$xx.value) {
+      this._addResult(keys, parent.$xx.value, pathUntil);
+    }
+
+    for (const [name, p] of Object.entries(parent.$)) {
+      this._lookup(
+        p,
+        index + 1,
+        keys.slice().concat([[name, this.parts[index]]]),
+        index + 1
+      );
+    }
+
+    if (parent.$x) {
+      this._lookup(parent.$x, index + 1, keys, pathUntil);
+      if (parent.$x.value) {
+        const restOfPathIsWildcard = this.parts
+          .slice(index)
+          .every(p => p === '*' || p === '**');
+        if (restOfPathIsWildcard) {
+          this._addResult(keys, parent.$x.value, pathUntil);
+        }
+      }
+    }
+
+    if (index === this.parts.length && parent.value) {
+      this._addResult(keys, parent.value, pathUntil);
+    } else if (parent.children) {
+      this._lookup(
+        parent.children[this.parts[index]],
+        index + 1,
+        keys,
+        index + 1
+      );
+    }
+  }
+}
+
+export class Paths<T> {
+  private map: Path<T> = new Path<T>();
+  private refs: { [key: string]: string } = {};
+
+  add = (path: string, ref: string, input: T) => {
     this.refs[ref] = path;
     const parts = path.split('.');
     let parent = this.map;
     for (let part of parts) {
-      if (part === '*' || part.startsWith('$')) {
-        parent = parent['$'] = parent['$'] || {};
+      if (part === '*') {
+        parent = parent.$x = parent.$x || new Path();
       } else if (part === '**') {
-        parent = parent['$$'] = parent['$$'] || {};
-        break;
+        parent = parent.$xx = parent.$xx || new Path();
+      } else if (part.startsWith('$')) {
+        parent = parent.$[part] = parent.$[part] || new Path();
       } else {
-        parent = parent['_'] = parent['_'] || {};
+        parent = parent.children[part] = parent.children[part] || new Path();
       }
-      parent = parent[part] = parent[part] || {};
     }
-    parent['h'] = parent['h'] || {};
-    parent['h'][ref] = input;
+    parent.value = parent.value || {};
+    parent.value[ref] = input;
   };
 
-  _lookup(
-    result: Lookup[],
-    parent: LooseObject,
-    parts: string[],
-    index = 0,
-    keys: string[] = [],
-    until = -1
-  ) {
-    for (; index < parts.length; index++) {
-      if (!parent) {
-        return;
-      }
-      const part = parts[index];
-      if (parent.$) {
-        for (let key of Object.keys(parent.$)) {
-          const newKeys: string[] = keys.slice();
-          let newUntil = until;
-          if (key !== '*' && key !== '**') {
-            newUntil = index;
-            newKeys[index] = key;
-          }
-          this._lookup(
-            result,
-            parent.$[key],
-            parts,
-            index + 1,
-            newKeys,
-            newUntil
-          );
-        }
-      }
-      if (parent.$$) {
-        if (parent.$$.h) {
-          break;
-        }
-      }
-      if (parent._) {
-        until = index;
-        parent = parent._[part];
-      } else {
-        return;
-      }
-    }
-
-    if (parent && !parent.h && parent.$$) {
-      parent = parent.$$;
-    }
-
-    if (parent && parent.h) {
-      const keysMap = keys.reduce((res, val, index) => {
-        if (val) res[val] = parts[index];
-        return res;
-      }, {} as LooseObject);
-
-      const res = {
-        keys: keysMap,
-        _: parent.h,
-        path: (until >= 0 ? parts.slice(0, until + 1) : parts).join('.'),
-        ...(until >= 0 ? { fullPath: parts.join('.') } : {}),
-      };
-      result.push(res);
-    }
+  lookupByString(path: string): Lookup<T>[] {
+    return this.lookup(path.split('.')).lookups;
   }
 
-  lookup(path: string) {
-    const parts = path.split('.');
-    const result: Lookup[] = [];
-    this._lookup(result, this.map, parts);
-    return result;
+  lookup(path: string[]): { isEol: boolean; lookups: Lookup<T>[] } {
+    const lookup = new Lookuper<T>(this.map, path);
+    const lookups = lookup.lookup();
+    return {
+      isEol: lookup.isEol,
+      lookups,
+    };
   }
 
   remove(ref: string) {
@@ -106,32 +154,24 @@ export class Paths {
     if (!path) return;
 
     const parts = path.split('.');
-    let parent = this.map;
+    let parent: Path<T> | undefined = this.map;
     for (let part of parts) {
-      if (part.startsWith('$') || part === '*') {
-        parent = parent['$'][part];
+      if (part.startsWith('$')) {
+        parent = parent?.$[part];
+      } else if (part === '*') {
+        parent = parent?.$x;
       } else if (part === '**') {
-        parent = parent['$$'];
+        parent = parent?.$xx;
         break;
       } else {
-        parent = parent['_'][part];
+        parent = parent?.children[part];
       }
     }
-    if (parent && parent['h']) {
-      delete parent['h'][ref];
-      if (Object.keys(parent['h']).length === 0) {
-        delete parent['h'];
+    if (parent && parent.value) {
+      delete parent.value[ref];
+      if (Object.keys(parent.value).length === 0) {
+        delete parent.value;
       }
     }
   }
 }
-
-export const clean = (path: string) => {
-  const res: string[] = [];
-  path.split('.').every(part => {
-    const check = part !== '*' && part !== '**' && !part.startsWith('$');
-    if (check) res.push(part);
-    return check;
-  });
-  return res.join('.');
-};
