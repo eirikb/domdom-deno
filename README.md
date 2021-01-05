@@ -66,18 +66,15 @@ Original readme below here
 
 **Facts** - not highlights, just facts:
 
-- Alternative to React + Redux or Vue + Vuex, with support for routing
+- Alternative to React + Redux or Vue + Vuex
+- Written in TypeScript
 - No virtual dom
 - Support for Deno (without jspm or pika)
-- Support for TypeScript
 - Nothing reactive - totally unreactive - fundamentally different from React
 - One global observable state
     - Support for re-usable components (with partition of global state)
     - No local state
 - JSX return pure elements
-- Doesn't support arrays
-
-    - It's not as bad as you might think - Not great, not terrible
 
 ## Menu
 
@@ -106,6 +103,8 @@ Original readme below here
   - [Split view and data](#split-view-and-data)
   - [Animation (garbage collection)](#animation-garbage-collection)
 - [TypeScript](#typescript)
+  - [GodMode](#godmode)
+    - [Example](#example)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -533,20 +532,13 @@ This might seem silly, and it might not be obvious how to use say `setInterval`,
 from ever being cleaned up by garbage collector.
 
 ```jsx
-const view = (() => {
-  const img = <img src="https://i.imgur.com/rsD0RUq.jpg"/>;
-
-  img.attach(
-    on('tick').map(time => (img.style.transform = `rotate(${time % 180}deg)`))
-  );
-
-  return (
-    <div>
-      <button onClick={() => set('run', !get('run'))}>Start/Stop</button>
-      {img}
-    </div>
-  );
-})();
+const view = <div>
+  <img src="https://i.imgur.com/rsD0RUq.jpg" style={
+    on('tick').map(time => ({ rotate: `${time % 180}deg` }
+    ))
+  }/>
+  <button onClick={() => set('run', !get('run'))}>Start/Stop</button>
+</div>;
 
 (function loop(time) {
   if (get('run')) {
@@ -559,3 +551,73 @@ const view = (() => {
 ## TypeScript
 
 domdom has full TypeScript support, it's written in TypeScript.
+
+### GodMode
+
+An experimental mode. Creates
+a [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). When properties are
+modified `set`/`unset` will be called automatically.  
+This makes it much easier to work with TypeScript and types.  
+Note: Does **not** support IE11.
+
+`godMode` extends from `domdom` and has the same properties.  
+In addition, it has `data` and `path`.  
+`data` is the single big data object as previously interacted with through `get` and `set`.  
+`path` is a helper function to create a path from a type. e.g.,
+
+```ts
+interface User {
+    name: string;
+    children: User[];
+}
+
+interface Data {
+    a: {
+        users: User[]
+    }
+}
+
+const pathAsString = path<Data>(p => p.users['$id']);
+// pathAsString will be 'users.$id'
+```
+
+Note you still need the path modifiers, such as `*` or `$`. These can be provided as shown above.
+
+#### Example
+
+```tsx
+import {godMode} from '@eirikb/domdom';
+
+interface User {
+    name: string;
+}
+
+interface Data {
+    users: User[],
+    edit: boolean[]
+}
+
+const {React, on, path, init, data} = godMode<Data>();
+
+data.edit = [];
+data.users = [
+    {name: 'eirik'},
+    {name: 'steffen'},
+    {name: 'frank'}
+]
+
+init(document.body, <ul>
+    {on(path(p => p.users['$id'])).map((user, {child, $id}) => {
+        return <li>
+            <button onclick={() => data.edit[$id] = !data.edit[$id]}>Edit?</button>
+            {on(child(path<User>(p => p.name)))}
+            {on(path(p => p.edit[$id])).map(edit => edit ?
+                <input type="text" dd-model={child(path<User>(p => p.name))}/> : null)}
+        </li>;
+    })}
+</ul>);
+
+```
+
+Note: When changing arrays (replace, `pop`, `splice`, etc.) godMode will first clear the array. This is a workaround to
+make it easier to work with arrays.
