@@ -2,10 +2,10 @@ import { Data, ListenerCallbackWithType, Pathifier } from '../data/index.ts';
 import { DomStower, StowerTransformer } from './dom-stower.ts';
 import { DomSquint } from './dom-squint.ts';
 import ddProps from './dd-props.ts';
-import { Domode, Opts } from './types.ts';
+import { Domode, Opts, React } from './types.ts';
 import { DomPathifier } from './pathifier.ts';
 
-export class React {
+export class ReactImpl implements React {
   private readonly data: Data;
 
   constructor(data: Data) {
@@ -82,7 +82,7 @@ export class Domdom {
 
   constructor(data: Data) {
     this._data = data;
-    this.React = new React(this._data);
+    this.React = new ReactImpl(this._data);
   }
 
   on = (path: string): Pathifier => {
