@@ -16,11 +16,11 @@ It makes domdom available _without_ use of pika.dev or jspm!
 ```tsx
 import domdom from 'https://deno.land/x/domdom';
 
-const { React, data, append } = domdom();
+const { React, on, set } = domdom();
 
-append(document.body, ({ on }) => <div>Hello {on('test')}</div>);
+append(document.body,  <div>Hello {on('test')}</div>);
 
-data.set('test', 'World!');
+set('test', 'World!');
 ```
 
 **tsconfig.json**
