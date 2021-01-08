@@ -5,9 +5,9 @@ import { DomPathifier } from './pathifier.ts';
 function setAttribute(element: HTMLElement, key: string, value: any) {
   if (value === null) value = '';
 
-  if (key === 'class') {
-    element.className = value;
-  } else if (key.startsWith('data-')) {
+  if (key === 'className') key = 'class';
+
+  if (key.startsWith('data-')) {
     const dataKey = key.split('-')[1];
     element.dataset[dataKey] = value;
   } else if (typeof value === 'object') {
