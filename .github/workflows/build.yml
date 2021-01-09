@@ -40,7 +40,7 @@ jobs:
         run: |
           export VERSION=$(git ls-remote --tags --refs --sort="v:refname" https://github.com/eirikb/domdom | tail -n1 | sed 's/.*\///')
           echo "VERSION is $VERSION"
-          echo "PKG_VERSION=$(npm show . version)" >> $GITHUB_ENV
+          echo "VERSION=$(npm show . version)" >> $GITHUB_ENV
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
