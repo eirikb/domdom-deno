@@ -11,6 +11,7 @@ import {
 export class Entries {
   entries: Entry[] = [];
   private keys: string[] = [];
+  private hasSet = new Set<string>();
 
   add(entry: Entry): number;
   add(entry: Entry, index: number): number;
@@ -21,6 +22,7 @@ export class Entries {
     }
     this.entries.splice(index, 0, entry);
     this.keys.splice(index, 0, entry.key);
+    this.hasSet.add(entry.key);
     return index;
   }
 
@@ -33,6 +35,7 @@ export class Entries {
     }
     this.entries.splice(index, 1);
     this.keys.splice(index, 1);
+    this.hasSet.delete(entry.key);
     return index;
   }
 
@@ -66,11 +69,15 @@ export class Entries {
   forEach(cb: (entry: Entry, index: number) => void) {
     this.entries.slice().forEach(cb);
   }
+
+  has(entry: Entry): boolean {
+    return this.hasSet.has(entry.key);
+  }
 }
 
 export interface Transformer {
-  entries: Entries;
   parent?: Transformer;
+  entries: Entries;
   next?: Transformer;
   onValue?: any;
   onOpts?: ListenerCallbackOptions;
@@ -326,7 +333,6 @@ export class SliceTransformer extends BaseTransformer {
 
 export class FilterTransformer extends BaseTransformer {
   private readonly filter: OnFilter;
-  private readonly all: Entries = new Entries();
 
   constructor(filter: OnFilter) {
     super();
@@ -335,20 +341,21 @@ export class FilterTransformer extends BaseTransformer {
 
   private _findIndex(key: string): number {
     let index = 0;
-    for (let i = 0; i < this.all.length; i++) {
-      if (this.all.get(i).key === key || index >= this.entries.length) {
-        return index;
-      }
-      if (this.all.get(i).key === (this.entries.get(index) || {}).key) {
-        index++;
+    const entries = this.parent?.entries;
+    if (entries) {
+      for (let i = 0; i < entries.length; i++) {
+        if (entries.get(i).key === key || index >= this.entries.length) {
+          return index;
+        }
+        if (entries.get(i).key === (this.entries.get(index) || {}).key) {
+          index++;
+        }
       }
     }
     return -1;
   }
 
   add(index: number, entry: Entry): void {
-    this.all.add(entry, index);
-
     if (
       this.filter(entry.value, {
         opts: entry.opts,
@@ -363,8 +370,6 @@ export class FilterTransformer extends BaseTransformer {
   }
 
   remove(index: number, entry: Entry): void {
-    this.all.remove(entry, index);
-
     index = this.entries.remove(entry);
     if (index >= 0) {
       this.next?.remove(index, entry);
@@ -374,28 +379,44 @@ export class FilterTransformer extends BaseTransformer {
   on(value: any, opts: ListenerCallbackOptions) {
     this.onValue = value;
     this.onOpts = opts;
-    this.all.forEach((entry, index) => this.update(index, index, entry));
+    let index = 0;
+    this.parent?.entries.forEach(entry => {
+      const test = this.filter(entry.value, {
+        opts: entry.opts,
+        onValue: this.onValue,
+        onOpts: this.onOpts,
+      });
+      const has = this.entries.has(entry);
+
+      if (test && !has) {
+        this.entries.add(entry, index);
+        this.next?.add(index, entry);
+      } else if (!test && has) {
+        this.entries.remove(entry);
+        this.next?.remove(index, entry);
+      }
+      if (test) index++;
+    });
   }
 
-  update(oldIndex: number, index: number, entry: Entry): void {
-    this.all.replace(entry, index, oldIndex);
-
+  update(_oldIndex: number, _index: number, entry: Entry): void {
     const test = this.filter(entry.value, {
       opts: entry.opts,
       onValue: this.onValue,
       onOpts: this.onOpts,
     });
-    oldIndex = this.entries.indexOf(entry);
-    const has = oldIndex >= 0;
+    const has = this.entries.has(entry);
     if (test && has) {
-      index = this._findIndex(entry.key);
+      const index = this._findIndex(entry.key);
+      const oldIndex = this.entries.indexOf(entry);
       this.entries.replace(entry, index, oldIndex);
       this.next?.update(oldIndex, index, entry);
     } else if (test && !has) {
-      index = this._findIndex(entry.key);
+      const index = this._findIndex(entry.key);
       this.entries.add(entry, index);
       this.next?.add(index, entry);
     } else if (!test && has) {
+      const oldIndex = this.entries.indexOf(entry);
       this.entries.remove(entry);
       this.next?.remove(oldIndex, entry);
     }

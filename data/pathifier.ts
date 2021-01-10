@@ -72,14 +72,19 @@ export class Pathifier {
     }
   }
 
-  addTransformer(transformer: Transformer) {
-    transformer.next = this._transformer;
-
+  lastTransformer() {
     let t: Transformer = this.rootTransformer;
     while (t?.next && t.next !== this._transformer) {
       t = t.next;
     }
-    t.next = transformer;
+    return t;
+  }
+
+  addTransformer(transformer: Transformer) {
+    transformer.next = this._transformer;
+    const lastTransformer = this.lastTransformer();
+    lastTransformer.next = transformer;
+    transformer.parent = lastTransformer;
   }
 
   map<T = any>(map: Mapper<T>): Pathifier {
