@@ -1,5 +1,5 @@
 import { Data, ListenerCallbackWithType, Pathifier } from '../data/index.ts';
-import { DomStower, StowerTransformer } from './dom-stower.ts';
+import { DomStower } from './dom-stower.ts';
 import { DomSquint } from './dom-squint.ts';
 import ddProps from './dd-props.ts';
 import { Domode, Opts, React } from './types.ts';
@@ -86,16 +86,7 @@ export class ReactImpl implements React {
 
     for (let index = 0; index < children.length; index++) {
       const child = children[index];
-      if (child instanceof DomPathifier) {
-        el.mountables.push(child);
-        if (child.transformer instanceof StowerTransformer) {
-          child.transformer.bloodyRebuild(stower, index);
-        } else {
-          child.transformer = new StowerTransformer(stower, index);
-        }
-      } else {
-        stower.add(child, index);
-      }
+      stower.add(child, index);
     }
 
     ddProps(this.data, el.mountables, el, props);
